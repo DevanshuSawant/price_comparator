@@ -6,9 +6,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 )
 
-type Response struct {
+type ResponseWazirx struct {
 	Markets []struct {
 		BaseMarket     string  `json:"baseMarket"`
 		QuoteMarket    string  `json:"quoteMarket"`
@@ -56,26 +57,67 @@ type Response struct {
 	} `json:"assets"`
 }
 
+
+/*type ResponseBinance []interface{
+	Symbol string `json:"symbol"`
+	Price  string `json:"price"`
+}
+*/
+
 func main() {
 
-	resp, err := http.Get("https://api.wazirx.com/api/v2/market-status")
+	respWazirx, err := http.Get("https://api.wazirx.com/api/v2/market-status")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body) // response body is []byte
+	defer respWazirx.Body.Close()
+	bodyWazirx, err := ioutil.ReadAll(respWazirx.Body) // response body is []byte
 	if err != nil {
 		fmt.Println("wrong here")
 	}
 
-	var result Response
-	if err := json.Unmarshal(body, &result); err != nil { // Parse []byte to the go struct pointer
+	var resultWazirx ResponseWazirx
+	if err := json.Unmarshal(bodyWazirx, &resultWazirx); err != nil { // Parse []byte to the go struct pointer
 		fmt.Println(err)
 	}
 
-	fmt.Println(result.Assets[0].Type)
+	/*
+	respBinance, err := http.Get("https://api.binance.com/api/v3/ticker/price")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer respBinance.Body.Close()
+	bodyBinance, err := ioutil.ReadAll(respBinance.Body) // response body is []byte
+	if err != nil {
+		fmt.Println("wrong here")
+	}
+
+	var resultBinance ResponseBinance
+	if err := json.Unmarshal(bodyBinance, &resultBinance); err != nil { // Parse []byte to the go struct pointer
+		fmt.Println(err)
+	}
+	*/
+
+	//fmt.Println(result.Assets[1].Type)
 
 	withdrawalprices := make(map[string]string)
-	withdrawalprices
+	//depositprices := make(map[string]string)
 
+	for i := 0; i < len(resultWazirx.Assets); i +=1 {
+		if resultWazirx.Assets[i].Withdrawal == "enabled" {
+			for j := 0; j < len(resultWazirx.Markets); j +=1 {
+				if resultWazirx.Assets[i].Type == resultWazirx.Markets[j].BaseMarket  {
+					withdrawalprices[strings.ToUpper(resultWazirx.Assets[i].Type) + "USDT"] = resultWazirx.Markets[j].Last
+				}
+			}	
+		}
+/*		if resultWazirx.Assets[i].Deposit == "enabled" {
+			for j := 0; j < len(resultBinance); j +=1 {
+				if string(resultBinance.Symbol[j]) == strings.ToUpper(resultWazirx.Assets[i].Type) + "USDT" {
+					depositprices[string(resultBinance.Symbol[j])] = string(resultBinance.Price[j])
+				}
+			}
+		}*/
+	} 
+	fmt.Println(withdrawalprices)
 }
