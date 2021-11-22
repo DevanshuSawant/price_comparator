@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 )
 
@@ -57,12 +58,17 @@ type ResponseWazirx struct {
 	} `json:"assets"`
 }
 
-
-/*type ResponseBinance []interface{
+type ResponseBinance []struct {
 	Symbol string `json:"symbol"`
 	Price  string `json:"price"`
 }
-*/
+
+func getFieldString(e *ResponseBinance, field string) string {
+	r := reflect.ValueOf(e)
+	f := reflect.Indirect(r).FieldByName(field)
+	return f.String()
+}
+
 
 func main() {
 
@@ -81,7 +87,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	/*
+	
 	respBinance, err := http.Get("https://api.binance.com/api/v3/ticker/price")
 	if err != nil {
 		log.Fatal(err)
@@ -92,13 +98,22 @@ func main() {
 		fmt.Println("wrong here")
 	}
 
+
+
 	var resultBinance ResponseBinance
 	if err := json.Unmarshal(bodyBinance, &resultBinance); err != nil { // Parse []byte to the go struct pointer
 		fmt.Println(err)
 	}
-	*/
+	
 
-	//fmt.Println(result.Assets[1].Type)
+
+	fmt.Println(reflect.TypeOf(resultBinance))
+    fmt.Println(reflect.ValueOf(resultBinance).Kind())
+
+	
+	fmt.Println(reflect.TypeOf(resultBinance[1]))
+    fmt.Println(reflect.ValueOf(resultBinance[1]).Kind())
+
 
 	withdrawalprices := make(map[string]string)
 	//depositprices := make(map[string]string)
@@ -117,7 +132,7 @@ func main() {
 					depositprices[string(resultBinance.Symbol[j])] = string(resultBinance.Price[j])
 				}
 			}
-		}*/
-	} 
-	fmt.Println(withdrawalprices)
+		}
+*/
+	}
 }
