@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"reflect"
 	"strings"
+	"time"
 )
 
 type ResponseWazirx struct {
@@ -58,20 +58,10 @@ type ResponseWazirx struct {
 	} `json:"assets"`
 }
 
-type ResponseBinance []struct {
-	Symbol string `json:"symbol"`
-	Price  string `json:"price"`
-}
-
-func getFieldString(e *ResponseBinance, field string) string {
-	r := reflect.ValueOf(e)
-	f := reflect.Indirect(r).FieldByName(field)
-	return f.String()
-}
 
 
 func main() {
-
+	start := time.Now()
 	respWazirx, err := http.Get("https://api.wazirx.com/api/v2/market-status")
 	if err != nil {
 		log.Fatal(err)
@@ -98,41 +88,32 @@ func main() {
 		fmt.Println("wrong here")
 	}
 
-
-
-	var resultBinance ResponseBinance
+	var resultBinance []map[string]string
 	if err := json.Unmarshal(bodyBinance, &resultBinance); err != nil { // Parse []byte to the go struct pointer
 		fmt.Println(err)
 	}
-	
-
-
-	fmt.Println(reflect.TypeOf(resultBinance))
-    fmt.Println(reflect.ValueOf(resultBinance).Kind())
-
-	
-	fmt.Println(reflect.TypeOf(resultBinance[1]))
-    fmt.Println(reflect.ValueOf(resultBinance[1]).Kind())
-
 
 	withdrawalprices := make(map[string]string)
-	//depositprices := make(map[string]string)
+	depositprices := make(map[string]string)
 
 	for i := 0; i < len(resultWazirx.Assets); i +=1 {
+		pairSymbol := strings.ToUpper(resultWazirx.Assets[i].Type) + "USDT"
 		if resultWazirx.Assets[i].Withdrawal == "enabled" {
 			for j := 0; j < len(resultWazirx.Markets); j +=1 {
 				if resultWazirx.Assets[i].Type == resultWazirx.Markets[j].BaseMarket  {
-					withdrawalprices[strings.ToUpper(resultWazirx.Assets[i].Type) + "USDT"] = resultWazirx.Markets[j].Last
+					withdrawalprices[pairSymbol] = resultWazirx.Markets[j].Last
 				}
 			}	
 		}
-/*		if resultWazirx.Assets[i].Deposit == "enabled" {
-			for j := 0; j < len(resultBinance); j +=1 {
-				if string(resultBinance.Symbol[j]) == strings.ToUpper(resultWazirx.Assets[i].Type) + "USDT" {
-					depositprices[string(resultBinance.Symbol[j])] = string(resultBinance.Price[j])
+		if resultWazirx.Assets[i].Deposit =="enabled" {
+			for j := 0; j <  len(resultBinance); j +=1 {
+				if resultBinance[j]["symbol"] == pairSymbol {
+					depositprices[pairSymbol] = resultBinance[j]["price"]
 				}
 			}
 		}
-*/
 	}
+	fmt.Println(withdrawalprices)
+	fmt.Println(depositprices)
+	fmt.Println(time.Since(start))
 }
