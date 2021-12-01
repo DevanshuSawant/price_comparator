@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"strconv"
 )
 
 type ResponseWazirx struct {
@@ -76,7 +77,6 @@ func main() {
 	if err := json.Unmarshal(bodyWazirx, &resultWazirx); err != nil { // Parse []byte to the go struct pointer
 		fmt.Println(err)
 	}
-
 	
 	respBinance, err := http.Get("https://api.binance.com/api/v3/ticker/price")
 	if err != nil {
@@ -103,7 +103,7 @@ func main() {
 				if resultWazirx.Assets[i].Type == resultWazirx.Markets[j].BaseMarket  {
 					withdrawalprices[pairSymbol] = resultWazirx.Markets[j].Last
 				}
-			}	
+			}
 		}
 		if resultWazirx.Assets[i].Deposit =="enabled" {
 			for j := 0; j <  len(resultBinance); j +=1 {
@@ -113,7 +113,36 @@ func main() {
 			}
 		}
 	}
-	fmt.Println(withdrawalprices)
-	fmt.Println(depositprices)
+
+	for kw, vw := range withdrawalprices {
+		for kd, vd := range depositprices {
+			if kw == kd {
+				switch  {
+
+					case vw == vd:
+						fmt.Println("both equal")		
+
+					case vw > vd:
+						s, err1 := strconv.ParseFloat(vw, 32);
+						g, err2 := strconv.ParseFloat(vd, 32);
+						if err1 == nil && err2 == nil {
+							x := ((s-g)/g)*100
+							fmt.Println("wazirx higher%", x, "for", kw)
+						}
+					
+					case vw < vd:
+						s, err1 := strconv.ParseFloat(vw, 32);
+						g, err2 := strconv.ParseFloat(vd, 32);
+						if err1 == nil && err2 == nil {
+							x := ((g-s)/s)*100
+							fmt.Println("binance higher%", x, "for", kw)												
+						}
+				}
+			}
+		}									
+	}
+
+	//fmt.Println(withdrawalprices)
+	//fmt.Println(depositprices)
 	fmt.Println(time.Since(start))
 }
