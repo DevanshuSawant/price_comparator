@@ -9,7 +9,10 @@ import (
 	"strings"
 	"time"
 	"strconv"
-	//"github.com/adshao/go-binance/v2"
+	"sort"
+	"github.com/joho/godotenv"
+	"os"
+	"github.com/adshao/go-binance/v2"
 )
 
 type ResponseWazirx struct {		//It follows the structure of the response from the GET request to wazirx API .It converts it into strings/floats etc(using variables)
@@ -70,7 +73,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(time.Since(wazirxResponse))
+	wazirxResponseTime :=time.Since(wazirxResponse)
 	defer respWazirx.Body.Close()
 	bodyWazirx, err := ioutil.ReadAll(respWazirx.Body) // response body is []byte
 	if err != nil {
@@ -86,7 +89,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(time.Since(binanceResponse))
+	binanceResponseTime := time.Since(binanceResponse)
 	defer respBinance.Body.Close()
 	bodyBinance, err := ioutil.ReadAll(respBinance.Body) // response body is []byte
 	if err != nil {
@@ -118,20 +121,23 @@ func main() {
 		}
 	}
 
+	binanceCoin := make(map[string]float64)
+	wazirxCoin := make(map[string]float64)
+
 	for kw, vw := range withdrawalprices {		//compares both to get percentage diffrences between the two
 		for kd, vd := range depositprices {
 			if kw == kd {
 				switch  {
-
 					case vw == vd:
-						fmt.Println("both equal")		
+						fmt.Println(kw, "both equal")		
 
 					case vw > vd:
 						s, err1 := strconv.ParseFloat(vw, 64);
 						g, err2 := strconv.ParseFloat(vd, 64);
 						if err1 == nil && err2 == nil {
 							x := ((s-g)/g)*100
-							fmt.Println("wazirx higher%", x, "for", kw)
+							//fmt.Println("wazirx  higher%", x, "for", kw)
+							binanceCoin[kw] = x
 						}
 					
 					case vw < vd:
@@ -139,14 +145,59 @@ func main() {
 						g, err2 := strconv.ParseFloat(vd, 64);
 						if err1 == nil && err2 == nil {
 							x := ((g-s)/s)*100
-							fmt.Println("binance higher%", x, "for", kw)											
+							//fmt.Println("binance higher%", x, "for", kw)
+							wazirxCoin[kw] = x
 						}
 				}
 			}
 		}									
 	}
 
-	//fmt.Println(withdrawalprices)
-	//fmt.Println(depositprices)
-	fmt.Println(time.Since(start))
+    keysBinance := make([]string, 0, len(binanceCoin))
+    for key1 := range binanceCoin {
+        keysBinance = append(keysBinance, key1)
+    }
+    sort.Slice(keysBinance, func(i, j int) bool { return binanceCoin[keysBinance[i]] > binanceCoin[keysBinance[j]] })
+    for _, key1 := range keysBinance {
+    	fmt.Printf("%s, %f\n", key1, binanceCoin[key1])
+
+    }
+
+	keysWazirx := make([]string, 0, len(wazirxCoin))
+    for key2 := range wazirxCoin {
+        keysWazirx = append(keysWazirx, key2)
+    }
+    sort.Slice(keysWazirx, func(i, j int) bool { return wazirxCoin[keysWazirx[i]] > wazirxCoin[keysWazirx[j]] })
+    for _, key2 := range keysWazirx {
+    	fmt.Printf("%s, %f\n", key2, wazirxCoin[key2])
+
+    }
+/*
+	dotEnv := godotenv.Load()
+	if dotEnv != nil {
+	  log.Fatal("Error loading .env file")
+	}
+
+	var (
+		apiKey = os.Getenv("apiKey")
+		secretKey = os.Getenv("secretKey")
+	)
+	binance.UseTestnet = true
+	client := binance.NewClient(apiKey, secretKey)
+	res, err := client.NewGetAccountService().Do(context.Background())
+	if err != nil {
+   		fmt.Println(err)
+    	return
+}
+fmt.Println(res)
+
+	fmt.Println(keysWazirx)
+	fmt.Println(keysBinance)
+	fmt.Println(wazirxCoin)
+	fmt.Println(binanceCoin)
+*/
+	fmt.Println(time.Since(start))		//for measuring the processing time
+	time := time.Since(start) - wazirxResponseTime - binanceResponseTime
+	fmt.Println("Time For Code To Run (Excluding API Response Time):", time)
+	
 }
