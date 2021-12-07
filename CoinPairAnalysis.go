@@ -1,18 +1,20 @@
 package main
 
 import (
+	//"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	//"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
-	"sort"
-	"github.com/joho/godotenv"
-	"os"
-	"github.com/adshao/go-binance/v2"
+	//"github.com/adshao/go-binance/v2"
+	//"github.com/joho/godotenv"
+	//"reflect"
 )
 
 type ResponseWazirx struct {		//It follows the structure of the response from the GET request to wazirx API .It converts it into strings/floats etc(using variables)
@@ -63,6 +65,21 @@ type ResponseWazirx struct {		//It follows the structure of the response from th
 	} `json:"assets"`
 }
 
+type Account struct {
+	MakerCommission  int64     `json:"makerCommission"`
+	TakerCommission  int64     `json:"takerCommission"`
+	BuyerCommission  int64     `json:"buyerCommission"`
+	SellerCommission int64     `json:"sellerCommission"`
+	CanTrade         bool      `json:"canTrade"`
+	CanWithdraw      bool      `json:"canWithdraw"`
+	CanDeposit       bool      `json:"canDeposit"`
+	Balances         []struct {
+		Asset  string `json:"asset"`
+		Free   string `json:"free"`
+		Locked string `json:"locked"`
+	} `json:"balances"`
+}
+
 
 
 func main() {
@@ -108,7 +125,7 @@ func main() {
 		if resultWazirx.Assets[i].Withdrawal == "enabled" {
 			for j := 0; j < len(resultWazirx.Markets); j ++ {
 				if resultWazirx.Assets[i].Type == resultWazirx.Markets[j].BaseMarket && resultWazirx.Markets[j].QuoteMarket == "usdt"  {
-					withdrawalprices[pairSymbol] = resultWazirx.Markets[j].Last
+					withdrawalprices[pairSymbol] = resultWazirx.Markets[j].Buy
 				}
 			}
 		}
@@ -184,20 +201,38 @@ func main() {
 	)
 	binance.UseTestnet = true
 	client := binance.NewClient(apiKey, secretKey)
-	res, err := client.NewGetAccountService().Do(context.Background())
+
+	binanceBot := time.Now()
+	Account, err := client.NewGetAccountService().Do(context.Background())
 	if err != nil {
    		fmt.Println(err)
     	return
-}
-fmt.Println(res)
+	}
+	fmt.Println(Account.Balances[0].Asset)
 
+	order, err := client.NewCreateOrderService().Symbol("BUSDETH").
+        Side(binance.SideTypeBuy).Type(binance.OrderTypeLimit).
+        TimeInForce(binance.TimeInForceTypeGTC).Quantity("1").
+        Price("4000").Do(context.Background())
+		if err != nil {
+   		 fmt.Println(err)
+   		 return
+		}
+	fmt.Println(order)
+
+	fmt.Println(res1)
+*/
+
+	//binanceBotTime := time.Since(binanceBot)
+
+/*
 	fmt.Println(keysWazirx)
 	fmt.Println(keysBinance)
 	fmt.Println(wazirxCoin)
 	fmt.Println(binanceCoin)
 */
 	fmt.Println(time.Since(start))		//for measuring the processing time
-	time := time.Since(start) - wazirxResponseTime - binanceResponseTime
+	time := time.Since(start) - wazirxResponseTime - binanceResponseTime //-binanceBotTime
 	fmt.Println("Time For Code To Run (Excluding API Response Time):", time)
 	
 }
